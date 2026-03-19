@@ -9,8 +9,8 @@ from supabase import create_client
 st.set_page_config(page_title="LYFTX", layout="wide")
 
 # 🔐 SUPABASE
-SUPABASE_URL = "TU_URL"
-SUPABASE_KEY = "TU_KEY"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
