@@ -1,15 +1,18 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
 st.set_page_config(page_title="LYFTX Performance", layout="wide")
 
-# Estética LYFTX
+# Estética minimalista LYFTX
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
     h1, h2, h3 { color: #000000 !important; font-family: 'Helvetica', sans-serif; }
-    .stExpander { border: 1px solid #e6e6e6 !important; margin-bottom: 10px; }
+    .stExpander { border: 1px solid #e6e6e6 !important; margin-bottom: 10px; border-radius: 0px; }
+    /* Eliminar borde de la columna de índice vacía */
+    [data-testid="stTable"] th:first-child, [data-testid="stTable"] td:first-child { display: none; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -23,21 +26,25 @@ if 'db' not in st.session_state:
 
 # --- REGISTRO DIARIO ---
 for dia in dias:
-    with st.expander(f"💪 {dia}", expanded=False): # Quitamos el calendario, dejamos emoji
+    with st.expander(dia, expanded=False): 
+        # hide_index=True elimina la columna vacía de la izquierda
         df_editado = st.data_editor(
             st.session_state.db[dia],
             num_rows="dynamic",
             use_container_width=True,
-            hide_index=True,
+            hide_index=True, 
             key=f"editor_{dia}",
             column_config={
                 "Músculo": st.column_config.SelectboxColumn(options=musculos, required=True),
                 "Series": st.column_config.NumberColumn(min_value=0, step=1, default=0),
+                "Kg": st.column_config.TextColumn("Kg"),
+                "Reps Objetivo": st.column_config.TextColumn("Reps Objetivo"),
+                "Reps Logradas": st.column_config.TextColumn("Reps Logradas")
             }
         )
         st.session_state.db[dia] = df_editado
 
-# --- MOTOR DE CÁLCULO CORREGIDO ---
+# --- MOTOR DE CÁLCULO SUMATORIO ---
 volumen = {m: 0.0 for m in musculos}
 
 for dia in dias:
@@ -46,14 +53,14 @@ for dia in dias:
         for _, row in df_dia.iterrows():
             m = str(row["Músculo"])
             try:
-                # Convertimos a número de forma segura
+                # Suma rigurosa de cada serie ingresada
                 s = float(row["Series"]) if row["Series"] else 0.0
             except:
                 s = 0.0
             
             if m in volumen:
                 volumen[m] += s
-                # Biomecánica (Suma indirecta por serie)
+                # Lógica de fatiga/volumen indirecto
                 if m == "Pecho":
                     volumen["Tríceps"] += (s * 0.5); volumen["Deltoide frontal"] += (s * 0.5)
                 elif m == "Espalda":
@@ -63,16 +70,16 @@ for dia in dias:
                 elif m == "Isquios":
                     volumen["Glúteos"] += (s * 0.5)
 
-# --- GRÁFICA CON SEMÁFORO DE INTENSIDAD ---
+# --- GRÁFICA SEMÁFORO ---
 st.divider()
-st.header("📊 VOLUMEN SEMANAL ACUMULADO")
+st.header("VOLUMEN SEMANAL ACUMULADO")
 
 def get_color(v):
-    if v == 0: return "#E0E0E0" # Gris
-    if v <= 6: return "#4CAF50"  # Verde (MV)
-    if v <= 12: return "#FFEB3B" # Amarillo (MEV)
-    if v <= 20: return "#FF9800" # Naranja (MAV)
-    return "#F44336"            # Rojo (MRV / Sobreentrenamiento)
+    if v == 0: return "#E0E0E0" 
+    if v <= 6: return "#4CAF50"  # MV
+    if v <= 12: return "#FFEB3B" # MEV
+    if v <= 20: return "#FF9800" # MAV
+    return "#F44336"            # MRV
 
 colores_barras = [get_color(volumen[m]) for m in musculos]
 
@@ -84,16 +91,16 @@ fig = go.Figure(go.Bar(
     textposition='auto',
 ))
 
-fig.update_layout(template="plotly_white", height=500, xaxis={'tickangle': -45}, yaxis_title="Series Totales")
+fig.update_layout(template="plotly_white", height=500, xaxis={'tickangle': -45}, margin=dict(b=100))
 st.plotly_chart(fig, use_container_width=True)
 
-# LEYENDA CLARA
+# LEYENDA TÉCNICA
 st.markdown("""
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 1px solid #ddd; padding: 15px; border-radius: 10px;">
-    <div style="color: #4CAF50;">● <b>MV (1-6 series):</b> Mantenimiento</div>
-    <div style="color: #FBC02D;">● <b>MEV (7-12 series):</b> Mínimo Efectivo</div>
-    <div style="color: #FF9800;">● <b>MAV (13-20 series):</b> Máximo Adaptativo</div>
-    <div style="color: #F44336;">● <b>MRV (20+ series):</b> Sobreentrenamiento</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 1px solid #000; padding: 15px;">
+    <div style="color: #4CAF50;">● <b>MV:</b> Mantenimiento (1-6 series)</div>
+    <div style="color: #D4AF37;">● <b>MEV:</b> Mínimo Efectivo (7-12 series)</div>
+    <div style="color: #FF9800;">● <b>MAV:</b> Máximo Adaptativo (13-20 series)</div>
+    <div style="color: #F44336;">● <b>MRV:</b> Sobreentrenamiento (20+ series)</div>
 </div>
 """, unsafe_allow_html=True)
 
