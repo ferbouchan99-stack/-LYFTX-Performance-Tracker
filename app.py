@@ -76,3 +76,4 @@ if not df_total.empty:
     st.download_button("📥 Descargar Reporte CSV", df_total.to_csv(index=False).encode('utf-8'), "entrenamiento_lyftx.csv")
 
 
+
