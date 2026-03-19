@@ -2,3 +2,4 @@ streamlit
 pandas
 plotly
 supabase
+supabase==2.3.4
